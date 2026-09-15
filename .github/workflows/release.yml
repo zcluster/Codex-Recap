@@ -1,0 +1,45 @@
+name: Release Apple Silicon app
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify Apple Silicon runner
+        run: test "$(uname -m)" = "arm64"
+
+      - name: Build and package
+        run: |
+          chmod +x build_app.sh package_release.sh
+          ./package_release.sh
+          test "$(lipo -archs 'dist/Codex Recap.app/Contents/MacOS/Codex Recap')" = "arm64"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Codex-Recap-macOS-arm64
+          path: |
+            release/Codex-Recap-macOS-arm64.zip
+            release/SHA256SUMS.txt
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${GITHUB_REF_NAME}"
+          release/Codex-Recap-macOS-arm64.zip
+          release/SHA256SUMS.txt
+          --generate-notes
+          --title "Codex Recap ${GITHUB_REF_NAME}"
