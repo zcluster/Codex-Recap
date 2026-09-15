@@ -117,6 +117,7 @@ struct ContentView: View {
     @State private var recentExpanded = true
     @State private var dormantExpanded = false
     @AppStorage("themeMode") private var themeMode = "system"
+    @AppStorage("floatOnTop") private var floatOnTop = false
     @Environment(\.colorScheme) private var colorScheme
 
     private var isDark: Bool {
@@ -137,6 +138,10 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                Toggle("Float on Top", isOn: $floatOnTop)
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .help("Keep Codex Recap above other windows")
                 Button {
                     themeMode = isDark ? "light" : "dark"
                 } label: {
@@ -188,7 +193,7 @@ struct ContentView: View {
         }
         .frame(minWidth: 640, minHeight: 480)
         .background((isDark ? Color(red: 34 / 255, green: 34 / 255, blue: 34 / 255) : Color(nsColor: .windowBackgroundColor)).ignoresSafeArea())
-        .background(WindowAppearance(isDark: isDark))
+        .background(WindowAppearance(isDark: isDark, floatOnTop: floatOnTop))
         .preferredColorScheme(preferredColorScheme)
         .onAppear(perform: store.refresh)
     }
@@ -196,6 +201,7 @@ struct ContentView: View {
 
 struct WindowAppearance: NSViewRepresentable {
     let isDark: Bool
+    let floatOnTop: Bool
 
     func makeNSView(context: Context) -> NSView {
         NSView()
@@ -208,6 +214,7 @@ struct WindowAppearance: NSViewRepresentable {
             window.backgroundColor = self.isDark
                 ? NSColor(red: 34 / 255, green: 34 / 255, blue: 34 / 255, alpha: 1)
                 : .windowBackgroundColor
+            window.level = self.floatOnTop ? .floating : .normal
         }
     }
 }

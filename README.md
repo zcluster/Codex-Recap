@@ -13,6 +13,7 @@ A small, local-first macOS app for finding Codex projects you recently worked on
 - Shows older projects under **Dormant**, newest first.
 - Opens the latest project thread in Codex Desktop with one click.
 - Supports persistent light and Codex-style dark themes.
+- Includes a persistent **Float on Top** switch for keeping the app above other windows.
 - Reads local data only; no network requests, analytics, or account access.
 
 ## Requirements

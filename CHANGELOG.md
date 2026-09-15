@@ -7,4 +7,5 @@
 - Open the latest project conversation directly in Codex Desktop.
 - Show Today and Yesterday labels for recent activity.
 - Provide collapsible sections and a persistent light/dark theme toggle.
+- Add a persistent Float on Top window switch.
 - Ship an Apple Silicon-only macOS application build.
