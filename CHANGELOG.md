@@ -8,4 +8,5 @@
 - Show Today and Yesterday labels for recent activity.
 - Provide collapsible sections and a persistent light/dark theme toggle.
 - Add a persistent Float on Top window switch.
+- Refresh the interface with native macOS Liquid Glass-style materials.
 - Ship an Apple Silicon-only macOS application build.

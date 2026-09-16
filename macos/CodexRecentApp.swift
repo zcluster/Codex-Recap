@@ -1,5 +1,20 @@
+// Hallmark · genre: modern-minimal · macrostructure: Workbench · mood: native Liquid Glass
+// Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4
 import AppKit
 import SwiftUI
+
+enum GlassTokens {
+    static let cornerRadius: CGFloat = 14
+    static let controlRadius: CGFloat = 10
+
+    static func edge(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? .white.opacity(0.14) : .white.opacity(0.72)
+    }
+
+    static func shadow(for colorScheme: ColorScheme) -> Color {
+        .black.opacity(colorScheme == .dark ? 0.28 : 0.12)
+    }
+}
 
 struct RecentProject: Codable, Identifiable {
     let id: String
@@ -129,70 +144,84 @@ struct ContentView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Codex Projects")
-                        .font(.title2.bold())
-                    Text("Click a project to continue in Codex")
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Toggle("Float on Top", isOn: $floatOnTop)
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .help("Keep Codex Recap above other windows")
-                Button {
-                    themeMode = isDark ? "light" : "dark"
-                } label: {
-                    Image(systemName: isDark ? "sun.max" : "moon")
-                }
-                .help(isDark ? "Switch to light mode" : "Switch to dark mode")
-                Button(action: store.refresh) {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .help("Refresh")
-            }
-            .padding(20)
+        ZStack {
+            GlassBackdrop()
+            Color.black.opacity(isDark ? 0.22 : 0.025).ignoresSafeArea()
 
-            Divider()
-
-            if let error = store.errorMessage {
-                UnavailableView(
-                    title: "Couldn’t Load Codex History",
-                    icon: "exclamationmark.triangle",
-                    detail: error
-                )
-            } else if store.projects.isEmpty {
-                UnavailableView(
-                    title: "No Projects",
-                    icon: "clock",
-                    detail: "No local Codex sessions were found."
-                )
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 10) {
-                        ProjectSection(
-                            title: "Recent",
-                            detail: "Past 24 hours",
-                            projects: store.recentProjects,
-                            isExpanded: $recentExpanded,
-                            openProject: store.openInCodex
-                        )
-                        ProjectSection(
-                            title: "Dormant",
-                            detail: "More than 24 hours ago · Newest to oldest",
-                            projects: store.dormantProjects,
-                            isExpanded: $dormantExpanded,
-                            openProject: store.openInCodex
-                        )
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Codex Projects")
+                            .font(.title2.bold())
+                        Text("Click a project to continue in Codex")
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(16)
+                    Spacer()
+                    Toggle("Float on Top", isOn: $floatOnTop)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(.thinMaterial, in: Capsule())
+                        .overlay(Capsule().stroke(GlassTokens.edge(for: colorScheme), lineWidth: 1))
+                        .help("Keep Codex Recap above other windows")
+                    Button {
+                        themeMode = isDark ? "light" : "dark"
+                    } label: {
+                        Image(systemName: isDark ? "sun.max" : "moon")
+                    }
+                    .buttonStyle(GlassIconButtonStyle())
+                    .help(isDark ? "Switch to light mode" : "Switch to dark mode")
+                    Button(action: store.refresh) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(GlassIconButtonStyle())
+                    .help("Refresh")
+                }
+                .padding(20)
+                .background(.ultraThinMaterial)
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(GlassTokens.edge(for: colorScheme))
+                        .frame(height: 1)
+                }
+
+                if let error = store.errorMessage {
+                    UnavailableView(
+                        title: "Couldn’t Load Codex History",
+                        icon: "exclamationmark.triangle",
+                        detail: error
+                    )
+                } else if store.projects.isEmpty {
+                    UnavailableView(
+                        title: "No Projects",
+                        icon: "clock",
+                        detail: "No local Codex sessions were found."
+                    )
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ProjectSection(
+                                title: "Recent",
+                                detail: "Past 24 hours",
+                                projects: store.recentProjects,
+                                isExpanded: $recentExpanded,
+                                openProject: store.openInCodex
+                            )
+                            ProjectSection(
+                                title: "Dormant",
+                                detail: "More than 24 hours ago · Newest to oldest",
+                                projects: store.dormantProjects,
+                                isExpanded: $dormantExpanded,
+                                openProject: store.openInCodex
+                            )
+                        }
+                        .padding(16)
+                    }
                 }
             }
         }
         .frame(minWidth: 640, minHeight: 480)
-        .background((isDark ? Color(red: 34 / 255, green: 34 / 255, blue: 34 / 255) : Color(nsColor: .windowBackgroundColor)).ignoresSafeArea())
         .background(WindowAppearance(isDark: isDark, floatOnTop: floatOnTop))
         .preferredColorScheme(preferredColorScheme)
         .onAppear(perform: store.refresh)
@@ -210,12 +239,38 @@ struct WindowAppearance: NSViewRepresentable {
     func updateNSView(_ view: NSView, context: Context) {
         DispatchQueue.main.async {
             guard let window = view.window else { return }
-            window.titlebarAppearsTransparent = self.isDark
-            window.backgroundColor = self.isDark
-                ? NSColor(red: 34 / 255, green: 34 / 255, blue: 34 / 255, alpha: 1)
-                : .windowBackgroundColor
+            window.isOpaque = false
+            window.titlebarAppearsTransparent = true
+            window.backgroundColor = .clear
             window.level = self.floatOnTop ? .floating : .normal
         }
+    }
+}
+
+struct GlassBackdrop: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .underWindowBackground
+        view.blendingMode = .behindWindow
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
+}
+
+struct GlassIconButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(width: 30, height: 30)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: GlassTokens.controlRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: GlassTokens.controlRadius)
+                    .stroke(GlassTokens.edge(for: colorScheme), lineWidth: 1)
+            )
+            .opacity(configuration.isPressed ? 0.72 : 1)
     }
 }
 
@@ -225,6 +280,7 @@ struct ProjectSection: View {
     let projects: [RecentProject]
     @Binding var isExpanded: Bool
     let openProject: (RecentProject) -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -245,9 +301,15 @@ struct ProjectSection: View {
                         .foregroundStyle(.secondary)
                 }
                 .contentShape(Rectangle())
+                .padding(12)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: GlassTokens.controlRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: GlassTokens.controlRadius)
+                        .stroke(GlassTokens.edge(for: colorScheme), lineWidth: 1)
+                )
             }
             .buttonStyle(.plain)
-            .padding(.top, title == "Dormant" ? 14 : 0)
+            .padding(.top, title == "Dormant" ? 8 : 0)
 
             if isExpanded && projects.isEmpty {
                 Text("No projects")
@@ -271,6 +333,7 @@ struct ProjectSection: View {
 struct ProjectRow: View {
     let project: RecentProject
     @Environment(\.colorScheme) private var colorScheme
+    @State private var isHovered = false
 
     private var sessionCount: String {
         "\(project.threadCount) \(project.threadCount == 1 ? "session" : "sessions")"
@@ -303,12 +366,14 @@ struct ProjectRow: View {
         }
         .padding(14)
         .contentShape(Rectangle())
-        .background(
-            colorScheme == .dark
-                ? Color(red: 43 / 255, green: 43 / 255, blue: 43 / 255)
-                : Color(nsColor: .controlBackgroundColor),
-            in: RoundedRectangle(cornerRadius: 12)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: GlassTokens.cornerRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: GlassTokens.cornerRadius)
+                .stroke(GlassTokens.edge(for: colorScheme), lineWidth: 1)
         )
+        .shadow(color: GlassTokens.shadow(for: colorScheme), radius: isHovered ? 12 : 7, y: isHovered ? 5 : 3)
+        .animation(.easeOut(duration: 0.16), value: isHovered)
+        .onHover { isHovered = $0 }
     }
 }
 
@@ -325,6 +390,8 @@ struct UnavailableView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: GlassTokens.cornerRadius))
+        .padding(20)
     }
 }
 
