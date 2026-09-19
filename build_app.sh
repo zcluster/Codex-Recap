@@ -6,6 +6,7 @@ app="$script_dir/dist/Codex Recap.app"
 
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$script_dir/macos/Info.plist" "$app/Contents/Info.plist"
+cp "$script_dir/macos/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
 
 swiftc \
   -parse-as-library \

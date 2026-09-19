@@ -2,6 +2,8 @@
 
 A small, local-first macOS app for finding Codex projects you recently worked on and reopening the right thread.
 
+<img src="assets/CodexRecapIcon.png" width="160" alt="Codex Recap app icon">
+
 ![Platform](https://img.shields.io/badge/macOS-13%2B-black)
 ![Architecture](https://img.shields.io/badge/Apple%20Silicon-arm64-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)

@@ -8,6 +8,8 @@
     <string>Codex Recap</string>
     <key>CFBundleIdentifier</key>
     <string>app.codex-recap</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

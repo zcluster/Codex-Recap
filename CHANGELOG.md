@@ -9,4 +9,5 @@
 - Provide collapsible sections and a persistent light/dark theme toggle.
 - Add a persistent Float on Top window switch.
 - Refresh the interface with native macOS Liquid Glass-style materials.
+- Add a custom Codex Recap macOS application icon.
 - Ship an Apple Silicon-only macOS application build.
