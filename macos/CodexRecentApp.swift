@@ -17,11 +17,28 @@ enum GlassTokens {
 }
 
 struct RecentProject: Codable, Identifiable {
+    enum ActivityStatus {
+        case running
+        case unread
+        case read
+    }
+
     let id: String
     let cwd: String
     let title: String
     let recencyAt: Int
     let threadCount: Int
+    let threadIDsJSON: String
+    let rolloutPathsJSON: String
+    var activityStatus: ActivityStatus = .read
+
+    var threadIDs: [String] {
+        Self.decodeStringArray(threadIDsJSON)
+    }
+
+    var rolloutPaths: [String] {
+        Self.decodeStringArray(rolloutPathsJSON)
+    }
 
     var name: String {
         URL(fileURLWithPath: cwd).lastPathComponent
@@ -47,6 +64,13 @@ struct RecentProject: Codable, Identifiable {
         case id, cwd, title
         case recencyAt = "recency_at"
         case threadCount = "thread_count"
+        case threadIDsJSON = "thread_ids"
+        case rolloutPathsJSON = "rollout_paths"
+    }
+
+    private static func decodeStringArray(_ value: String) -> [String] {
+        guard let data = value.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([String].self, from: data)) ?? []
     }
 }
 
@@ -65,7 +89,17 @@ final class ProjectStore: ObservableObject {
 
     func refresh() {
         do {
-            projects = try Self.loadProjects()
+            let codexHome = Self.codexHome
+            let unreadThreadIDs = Self.loadUnreadThreadIDs(codexHome: codexHome)
+            projects = try Self.loadProjects(codexHome: codexHome).map { project in
+                var project = project
+                if project.rolloutPaths.contains(where: Self.isRunning) {
+                    project.activityStatus = .running
+                } else if project.threadIDs.contains(where: unreadThreadIDs.contains) {
+                    project.activityStatus = .unread
+                }
+                return project
+            }
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -77,15 +111,18 @@ final class ProjectStore: ObservableObject {
         NSWorkspace.shared.open(url)
     }
 
-    private static func loadProjects() throws -> [RecentProject] {
-        let codexHome = ProcessInfo.processInfo.environment["CODEX_HOME"]
+    private static var codexHome: String {
+        ProcessInfo.processInfo.environment["CODEX_HOME"]
             .map { NSString(string: $0).expandingTildeInPath }
             ?? NSString(string: "~/.codex").expandingTildeInPath
+    }
+
+    private static func loadProjects(codexHome: String) throws -> [RecentProject] {
         let database = URL(fileURLWithPath: codexHome).appendingPathComponent("state_5.sqlite")
 
         let query = """
         WITH all_threads AS (
-          SELECT id, cwd,
+          SELECT id, cwd, rollout_path,
                  COALESCE(NULLIF(name, ''), NULLIF(title, ''),
                           NULLIF(first_user_message, ''), 'Untitled thread') AS title,
                  recency_at
@@ -97,9 +134,11 @@ final class ProjectStore: ObservableObject {
                  COUNT(*) OVER (PARTITION BY cwd) AS thread_count
           FROM all_threads
         )
-        SELECT id, cwd, title, recency_at, thread_count
-        FROM ranked
-        WHERE rank = 1
+        SELECT latest.id, latest.cwd, latest.title, latest.recency_at, latest.thread_count,
+               (SELECT json_group_array(id) FROM all_threads WHERE cwd = latest.cwd) AS thread_ids,
+               (SELECT json_group_array(rollout_path) FROM all_threads WHERE cwd = latest.cwd) AS rollout_paths
+        FROM ranked AS latest
+        WHERE latest.rank = 1
         ORDER BY recency_at DESC;
         """
 
@@ -124,6 +163,61 @@ final class ProjectStore: ObservableObject {
         }
         let data = output.fileHandleForReading.readDataToEndOfFile()
         return try JSONDecoder().decode([RecentProject].self, from: data)
+    }
+
+    private static func loadUnreadThreadIDs(codexHome: String) -> Set<String> {
+        let url = URL(fileURLWithPath: codexHome).appendingPathComponent(".codex-global-state.json")
+        guard
+            let data = try? Data(contentsOf: url),
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let state = root["electron-thread-read-state-v1"] as? [String: Any],
+            let identities = state["unreadByIdentity"] as? [String: Any]
+        else { return [] }
+
+        var result = Set<String>()
+        for identityValue in identities.values {
+            guard let hosts = identityValue as? [String: Any] else { continue }
+            for (host, threadIDs) in hosts where host.hasPrefix("local:") {
+                guard let threadIDs = threadIDs as? [String] else { continue }
+                result.formUnion(threadIDs)
+            }
+        }
+        return result
+    }
+
+    private static func isRunning(rolloutPath: String) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: URL(fileURLWithPath: rolloutPath)) else {
+            return false
+        }
+        defer { try? handle.close() }
+
+        let length = (try? handle.seekToEnd()) ?? 0
+        let chunkSize: UInt64 = 512 * 1024
+        var end = length
+        var suffix = ""
+
+        while end > 0 {
+            let start = end > chunkSize ? end - chunkSize : 0
+            try? handle.seek(toOffset: start)
+            guard
+                let data = try? handle.read(upToCount: Int(end - start)),
+                let chunk = String(data: data, encoding: .utf8)
+            else { return false }
+
+            let text = chunk + suffix
+            let started = text.range(of: #""type":"task_started""#, options: .backwards)?.lowerBound
+            let completed = text.range(of: #""type":"task_complete""#, options: .backwards)?.lowerBound
+            let aborted = text.range(of: #""type":"turn_aborted""#, options: .backwards)?.lowerBound
+            let stopped = [completed, aborted].compactMap { $0 }.max()
+
+            if let started, let stopped { return started > stopped }
+            if started != nil { return true }
+            if stopped != nil { return false }
+
+            suffix = String(text.prefix(64))
+            end = start
+        }
+        return false
     }
 }
 
@@ -225,6 +319,9 @@ struct ContentView: View {
         .background(WindowAppearance(isDark: isDark, floatOnTop: floatOnTop))
         .preferredColorScheme(preferredColorScheme)
         .onAppear(perform: store.refresh)
+        .onReceive(Timer.publish(every: 3, on: .main, in: .common).autoconnect()) { _ in
+            store.refresh()
+        }
     }
 }
 
@@ -341,10 +438,14 @@ struct ProjectRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: "folder.fill")
-                .font(.title2)
-                .foregroundStyle(.blue)
-                .frame(width: 30)
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: "folder.fill")
+                    .font(.title2)
+                    .foregroundStyle(.blue)
+                ProjectActivityIndicator(status: project.activityStatus)
+                    .offset(x: 5, y: -5)
+            }
+            .frame(width: 30)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(project.name).font(.headline)
@@ -374,6 +475,28 @@ struct ProjectRow: View {
         .shadow(color: GlassTokens.shadow(for: colorScheme), radius: isHovered ? 12 : 7, y: isHovered ? 5 : 3)
         .animation(.easeOut(duration: 0.16), value: isHovered)
         .onHover { isHovered = $0 }
+    }
+}
+
+struct ProjectActivityIndicator: View {
+    let status: RecentProject.ActivityStatus
+
+    var body: some View {
+        switch status {
+        case .running:
+            ProgressView()
+                .controlSize(.mini)
+                .tint(.blue)
+                .help("Running in Codex")
+        case .unread:
+            Circle()
+                .fill(.blue)
+                .frame(width: 8, height: 8)
+                .overlay(Circle().stroke(.background, lineWidth: 1.5))
+                .help("Completed · Unread")
+        case .read:
+            EmptyView()
+        }
     }
 }
 

@@ -27,6 +27,8 @@ A small, local-first macOS app for finding Codex projects you recently worked on
 
 Codex Recap does not have its own login. It reads `~/.codex/state_5.sqlite` in read-only mode and opens threads using `codex://threads/<thread-id>`. If `CODEX_HOME` is set, that directory is used instead.
 
+Project icons use the same state model as Codex Desktop: a spinner means at least one task in the project is running, while a blue dot means Codex has a completed unread task. Projects whose completed tasks have already been opened have no status badge. Statuses refresh automatically every three seconds.
+
 ## Install
 
 Download `Codex-Recap-macOS-arm64.zip` from the GitHub Releases page, unzip it, and move **Codex Recap.app** to Applications.

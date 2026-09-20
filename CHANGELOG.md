@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Added Codex-compatible running and completed-unread project indicators.
+- Added automatic status refresh every three seconds.
+
 ## 1.0.0 - 2026-09-15
 
 - List Codex projects active in the last 24 hours under Recent.
