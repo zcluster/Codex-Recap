@@ -237,40 +237,58 @@ struct ContentView: View {
         themeMode == "system" ? nil : (themeMode == "dark" ? .dark : .light)
     }
 
+    private var headerTitle: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("Codex Projects")
+                .font(.title2.bold())
+            Text("Click a project to continue in Codex")
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+    }
+
+    private var headerControls: some View {
+        HStack(spacing: 12) {
+            Toggle("Float on Top", isOn: $floatOnTop)
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(.thinMaterial, in: Capsule())
+                .overlay(Capsule().stroke(GlassTokens.edge(for: colorScheme), lineWidth: 1))
+                .help("Keep Codex Recap above other windows")
+            Button {
+                themeMode = isDark ? "light" : "dark"
+            } label: {
+                Image(systemName: isDark ? "sun.max" : "moon")
+            }
+            .buttonStyle(GlassIconButtonStyle())
+            .help(isDark ? "Switch to light mode" : "Switch to dark mode")
+            Button(action: store.refresh) {
+                Image(systemName: "arrow.clockwise")
+            }
+            .buttonStyle(GlassIconButtonStyle())
+            .help("Refresh")
+        }
+    }
+
     var body: some View {
         ZStack {
             GlassBackdrop()
             Color.black.opacity(isDark ? 0.22 : 0.025).ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Codex Projects")
-                            .font(.title2.bold())
-                        Text("Click a project to continue in Codex")
-                            .foregroundStyle(.secondary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        headerTitle
+                        Spacer()
+                        headerControls
                     }
-                    Spacer()
-                    Toggle("Float on Top", isOn: $floatOnTop)
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(.thinMaterial, in: Capsule())
-                        .overlay(Capsule().stroke(GlassTokens.edge(for: colorScheme), lineWidth: 1))
-                        .help("Keep Codex Recap above other windows")
-                    Button {
-                        themeMode = isDark ? "light" : "dark"
-                    } label: {
-                        Image(systemName: isDark ? "sun.max" : "moon")
+                    VStack(alignment: .leading, spacing: 12) {
+                        headerTitle
+                        headerControls
+                            .frame(maxWidth: .infinity, alignment: .trailing)
                     }
-                    .buttonStyle(GlassIconButtonStyle())
-                    .help(isDark ? "Switch to light mode" : "Switch to dark mode")
-                    Button(action: store.refresh) {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .buttonStyle(GlassIconButtonStyle())
-                    .help("Refresh")
                 }
                 .padding(20)
                 .background(.ultraThinMaterial)
@@ -315,7 +333,7 @@ struct ContentView: View {
                 }
             }
         }
-        .frame(minWidth: 640, minHeight: 480)
+        .frame(minWidth: 320, minHeight: 480)
         .background(WindowAppearance(isDark: isDark, floatOnTop: floatOnTop))
         .preferredColorScheme(preferredColorScheme)
         .onAppear(perform: store.refresh)
@@ -386,16 +404,26 @@ struct ProjectSection: View {
                     isExpanded.toggle()
                 }
             } label: {
-                HStack(alignment: .firstTextBaseline) {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.caption.bold())
-                        .frame(width: 12)
-                    Text(title).font(.title3.bold())
-                    Text(detail).font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(projects.count)")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline) {
+                        sectionChevron
+                        Text(title).font(.title3.bold())
+                        Text(detail).font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        sectionCount
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline) {
+                            sectionChevron
+                            Text(title).font(.title3.bold())
+                            Spacer()
+                            sectionCount
+                        }
+                        Text(detail)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.leading, 20)
+                    }
                 }
                 .contentShape(Rectangle())
                 .padding(12)
@@ -424,6 +452,18 @@ struct ProjectSection: View {
                 }
             }
         }
+    }
+
+    private var sectionChevron: some View {
+        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+            .font(.caption.bold())
+            .frame(width: 12)
+    }
+
+    private var sectionCount: some View {
+        Text("\(projects.count)")
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.secondary)
     }
 }
 
