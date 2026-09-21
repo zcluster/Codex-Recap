@@ -318,7 +318,7 @@ struct ContentView: View {
         .background(WindowAppearance(isDark: isDark, floatOnTop: floatOnTop))
         .preferredColorScheme(preferredColorScheme)
         .onAppear(perform: store.refresh)
-        .onReceive(Timer.publish(every: 3, on: .main, in: .common).autoconnect()) { _ in
+        .onReceive(Timer.publish(every: 6, on: .main, in: .common).autoconnect()) { _ in
             store.refresh()
         }
     }

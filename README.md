@@ -31,7 +31,7 @@ Codex work is often spread across many folders and tasks. The next day, remember
   - a spinner means at least one task in the project is running;
   - a blue dot means Codex has a completed, unread task;
   - no badge means completed tasks have already been opened.
-- Refreshes task status automatically every three seconds.
+- Refreshes task status automatically every six seconds.
 - Provides collapsible **Active** and **Dormant** sections.
 - Supports light and dark themes with a native Liquid Glass-style SwiftUI interface.
 - Includes a persistent **Float on Top** switch.

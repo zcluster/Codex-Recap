@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Added Codex-compatible running and completed-unread project indicators.
-- Added automatic status refresh every three seconds.
+- Added automatic status refresh every six seconds.
 
 ## 1.0.0 - 2026-09-15
 
