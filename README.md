@@ -11,7 +11,7 @@ A small, local-first macOS app for finding Codex projects you recently worked on
 ## Features
 
 - Groups local Codex threads by working directory.
-- Shows projects active in the past 24 hours under **Recent**.
+- Shows projects active in the past 24 hours under **Active**.
 - Shows older projects under **Dormant**, newest first.
 - Opens the latest project thread in Codex Desktop with one click.
 - Supports persistent light and Codex-style dark themes.

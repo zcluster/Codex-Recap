@@ -296,7 +296,7 @@ struct ContentView: View {
                     ScrollView {
                         LazyVStack(spacing: 12) {
                             ProjectSection(
-                                title: "Recent",
+                                title: "Active",
                                 detail: "Past 24 hours",
                                 projects: store.recentProjects,
                                 isExpanded: $recentExpanded,
