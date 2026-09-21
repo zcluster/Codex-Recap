@@ -1,60 +1,104 @@
 # Codex Recap
 
-A small, local-first macOS app for finding Codex projects you recently worked on and reopening the right thread.
+Codex Recap is a small, local-first macOS companion for finding Codex projects you recently worked on and reopening the right task before it gets forgotten.
 
-<img src="assets/CodexRecapIcon.png" width="160" alt="Codex Recap app icon">
+<p align="center">
+  <img src="assets/CodexRecapIcon.png" width="144" alt="Codex Recap app icon">
+</p>
 
-![Platform](https://img.shields.io/badge/macOS-13%2B-black)
-![Architecture](https://img.shields.io/badge/Apple%20Silicon-arm64-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+<p align="center">
+  <img alt="macOS 13+" src="https://img.shields.io/badge/macOS-13%2B-black">
+  <img alt="Apple Silicon" src="https://img.shields.io/badge/Apple%20Silicon-arm64-blue">
+  <img alt="SwiftUI" src="https://img.shields.io/badge/UI-SwiftUI-orange">
+  <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-green">
+</p>
+
+![Codex Recap showing Active and Dormant projects](assets/codex-recap-demo-privacy.png)
+
+## Why Codex Recap?
+
+Codex work is often spread across many folders and tasks. The next day, remembering which project was active—and which result still needs attention—can be harder than reopening it. Codex Recap turns the local Codex history into a compact project dashboard:
+
+- **Active** shows projects used during the past 24 hours.
+- **Dormant** keeps older projects available, ordered from newest to oldest.
+- Clicking a project opens its latest task directly in Codex Desktop.
 
 ## Features
 
-- Groups local Codex threads by working directory.
-- Shows projects active in the past 24 hours under **Active**.
-- Shows older projects under **Dormant**, newest first.
-- Opens the latest project thread in Codex Desktop with one click.
-- Supports persistent light and Codex-style dark themes.
-- Uses a native macOS Liquid Glass-style material interface.
-- Includes a persistent **Float on Top** switch for keeping the app above other windows.
-- Reads local data only; no network requests, analytics, or account access.
+- Groups local Codex tasks by working directory instead of showing a flat task list.
+- Opens the latest task for a project through the native `codex://` URL handler.
+- Uses Codex-compatible status semantics:
+  - a spinner means at least one task in the project is running;
+  - a blue dot means Codex has a completed, unread task;
+  - no badge means completed tasks have already been opened.
+- Refreshes task status automatically every three seconds.
+- Provides collapsible **Active** and **Dormant** sections.
+- Supports light and dark themes with a native Liquid Glass-style SwiftUI interface.
+- Includes a persistent **Float on Top** switch.
+- Runs locally with no analytics, telemetry, or separate account login.
 
 ## Requirements
 
-- macOS 13 or later on Apple Silicon.
+- macOS 13 or later.
+- Apple Silicon (`arm64`). An Intel build is not provided.
 - Codex Desktop installed and signed in.
-- At least one local Codex session on the Mac.
+- At least one local Codex task on the Mac.
 
-Codex Recap does not have its own login. It reads `~/.codex/state_5.sqlite` in read-only mode and opens threads using `codex://threads/<thread-id>`. If `CODEX_HOME` is set, that directory is used instead.
-
-Project icons use the same state model as Codex Desktop: a spinner means at least one task in the project is running, while a blue dot means Codex has a completed unread task. Projects whose completed tasks have already been opened have no status badge. Statuses refresh automatically every three seconds.
+Codex Recap does **not** ask for your Codex credentials and does not have its own login screen. It uses the local data already created by Codex Desktop.
 
 ## Install
 
-Download `Codex-Recap-macOS-arm64.zip` from the GitHub Releases page, unzip it, and move **Codex Recap.app** to Applications.
+1. Open the repository's [Releases](../../releases) page.
+2. Download `Codex-Recap-macOS-arm64.zip` and `SHA256SUMS.txt`.
+3. Verify the download if desired:
 
-Release builds are currently unsigned. macOS may require you to right-click the app and choose **Open** the first time. Never bypass a warning if the downloaded checksum does not match `SHA256SUMS.txt` in the release.
+   ```bash
+   shasum -a 256 -c SHA256SUMS.txt
+   ```
+
+4. Unzip the archive and move **Codex Recap.app** to `/Applications`.
+5. Open the app. If macOS blocks the unsigned build, right-click it and choose **Open** after confirming the checksum matches.
+
+> Release builds are currently unsigned and not notarized. Never bypass a macOS warning if the downloaded checksum does not match the published checksum.
+
+## How it works
+
+Codex Recap reads the following local Codex files in read-only mode:
+
+- `$CODEX_HOME/state_5.sqlite` for task identifiers, working directories, titles, and activity timestamps;
+- `$CODEX_HOME/.codex-global-state.json` for Codex Desktop's completed-unread state;
+- local rollout logs to determine whether the latest turn is still running.
+
+When `CODEX_HOME` is not set, the app uses `~/.codex`. Selecting a project opens `codex://threads/<thread-id>`, handing navigation back to Codex Desktop.
+
+No Codex data is uploaded by the app. See [PRIVACY.md](PRIVACY.md) for the complete privacy notes.
 
 ## Build from source
 
-The app has no third-party dependencies. Xcode Command Line Tools are sufficient.
+The macOS app has no third-party dependencies. Install Xcode Command Line Tools, then run:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/codex-recap.git
-cd codex-recap
+git clone https://github.com/zcluster/Codex-Recap.git
+cd Codex-Recap
 ./build_app.sh
 open "dist/Codex Recap.app"
 ```
 
-Create the release ZIP and checksum locally:
+Create the distributable ZIP and SHA-256 checksum:
 
 ```bash
 ./package_release.sh
 ```
 
-## Optional CLI
+Run the tests:
 
-The repository also includes a zero-dependency Python CLI:
+```bash
+python3 -m unittest -v
+```
+
+## Optional command-line tool
+
+The repository also contains a zero-dependency Python CLI for listing recent Codex projects:
 
 ```bash
 python3 codex_recent.py
@@ -62,14 +106,32 @@ python3 codex_recent.py --hours 48
 python3 codex_recent.py --json
 ```
 
-## Privacy and compatibility
+Use `python3 codex_recent.py --help` for all options.
 
-See [PRIVACY.md](PRIVACY.md). Codex Recap relies on Codex Desktop's local SQLite schema and `codex://` URL handler. These are not documented as stable third-party APIs, so a future Codex update may require a compatibility update here.
+## Project structure
+
+```text
+macos/CodexRecentApp.swift    SwiftUI application
+macos/Info.plist              macOS bundle configuration
+assets/                       App icon and README screenshot
+codex_recent.py               Optional Python CLI
+build_app.sh                  Local arm64 app build
+package_release.sh            ZIP and checksum packaging
+.github/workflows/release.yml Automated release workflow
+```
+
+## Compatibility
+
+Codex Recap relies on Codex Desktop's local database schema, state file, rollout format, and URL handler. These are not guaranteed stable third-party APIs, so future Codex Desktop versions may require compatibility updates.
+
+## Contributing
+
+Issues and focused pull requests are welcome. When reporting a compatibility problem, include your macOS version and Codex Desktop version, but remove usernames, home-directory paths, task content, and other private information from screenshots or logs.
 
 ## Disclaimer
 
-Codex Recap is an independent open-source project. It is not affiliated with, endorsed by, or sponsored by OpenAI. Codex and OpenAI are trademarks of their respective owner.
+Codex Recap is an independent open-source project. It is not affiliated with, endorsed by, or sponsored by OpenAI. Codex and OpenAI are trademarks of their respective owners.
 
 ## License
 
-[MIT](LICENSE)
+Released under the [MIT License](LICENSE).
