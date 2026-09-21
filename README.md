@@ -13,7 +13,10 @@ Codex Recap is a small, local-first macOS companion for finding Codex projects y
   <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-green">
 </p>
 
-![Codex Recap showing Active and Dormant projects](assets/codex-recap-demo-privacy.png)
+<p align="center">
+  <img src="assets/codex-recap-demo-light-privacy.png" width="48%" alt="Codex Recap in light mode">
+  <img src="assets/codex-recap-demo-dark-privacy.png" width="48%" alt="Codex Recap in dark mode">
+</p>
 
 ## Why Codex Recap?
 
